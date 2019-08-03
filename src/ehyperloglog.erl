@@ -4,7 +4,7 @@
 -module(ehyperloglog).
 
 %% exports
--export([new/1, update/2, cardinality/1, merge/2]).
+-export([new/1, update/2, cardinality/1, merge/2, exist/2]).
 
 %% definitions
 -record(hll, {b :: pos_integer(), registers :: registers()}).
@@ -25,6 +25,9 @@ new(B) when B >= 4; B =< 16 -> #hll{ b = B, registers = reg_new(B) }.
 
 -spec update(any(), hll()) -> hll().
 update(V, Hll) -> Hll#hll{registers = update(V, Hll#hll.b, Hll#hll.registers)}.
+
+exist(V, Hll) ->
+    exist(V, Hll#hll.b, Hll#hll.registers).
 
 -spec cardinality(hll()) -> pos_integer().
 cardinality(Hll) ->
@@ -53,6 +56,10 @@ update(V, B, R) ->
     << Idx:B, Rest/bits >> = hash32(V),
     reg_set(R, Idx, erlang:max(reg_get(R, Idx), count_first_zeros(Rest))).
     
+exist(V, B, R) ->
+    << Idx:B, Rest/bits >> = hash32(V),
+    count_first_zeros(Rest) =< reg_get(R, Idx).
+
 -spec merge(hll(), hll()) -> hll().
 merge(Hll1, Hll2) ->
     R = bitmap:merge(Hll1#hll.registers, Hll2#hll.registers),
